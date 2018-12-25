@@ -1,3 +1,5 @@
+package hello1;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.Color.*;
@@ -7,8 +9,8 @@ import java.util.*;
 abstract class Shape implements Serializable {
     public abstract void draw(Graphics g);
 }
-class Line extends  Shape{//Ïß¶Î
-    int startX,startY;
+class Line extends  Shape{
+	int startX,startY;
     int endX,endY;
 
     public Line(int x1,int y1 ,int x2 ,int y2){
@@ -20,7 +22,7 @@ class Line extends  Shape{//Ïß¶Î
        g.drawLine(startX,startY, endX,endY);
 }
 }
-class Oval extends Shape{  //ÍÖÔ²
+class Oval extends Shape{  
     int startX,startY;
     int  width,height;
 
@@ -33,7 +35,7 @@ class Oval extends Shape{  //ÍÖÔ²
        g.drawOval(startX,startY,width,height);
 }
 }
-class Rect extends Shape{//¾ØĞÎ
+class Rect extends Shape{
 	int  startX,startY;
 	int width,height;
 	public Rect(int x1,int y1,int x2,int y2){
@@ -47,27 +49,39 @@ class Rect extends Shape{//¾ØĞÎ
 	}
 }
 
-public class WhiteBoard extends Canvas implements Runnable{
-	MulticastSocket mSocket;   // ÓÃÓÚÊÕ·¢Êı¾İµÄMulticastSocket¶ÔÏó
-	InetAddress inetAddress;   //¶à²¥µØÖ·
-	ArrayList<Shape> graphs = new ArrayList<>(); //´æ·ÅËùÓĞ»æÖÆÏß
-	int lastx, lasty;              // ÉÏ´ÎÊó±êµã»÷Î»ÖÃ
-	int prex, prey;   //ÏğÆ¤½î»æÖÆÉÏ´ÎÊó±êÎ»ÖÃ
-	int type = 1;  //ĞÎ×´ÀàĞÍ,1¡ªÖ±Ïß,2¡ªÍÖÔ²,3-¾ØĞÎ
-
+public class WhiteBoard extends Canvas implements Runnable,ActionListener{
+	MulticastSocket mSocket;  
+	InetAddress inetAddress;   
+	ArrayList<Shape> graphs = new ArrayList<>(); 
+	int lastx, lasty;              
+	int prex, prey;  
+	int type = 1;  
+	static boolean SW = false;
+	Color color = Color.black; // ç”»ç¬”é¢œè‰²
+	PopupMenu popup; //å¼¹å‡ºèœå•
+	
 	public WhiteBoard() {
-		connect(); //¼ÓÈë¶à²¥
-		new Thread(this).start(); //´´½¨ÏûÏ¢¼àÌıÏß³Ì
+		popup=new PopupMenu("Color");
+		String labels[]={"Clear", "Red", "Green", "Blue", "Black"}; 
+		for(int i = 0; i < labels.length; i++) {
+			MenuItem mi = new MenuItem(labels[i]); //åˆ›å»ºèœå•é¡¹
+			mi.addActionListener(this); //ç»™èœå•é¡¹æ³¨å†ŒåŠ¨ä½œç›‘å¬è€…
+			popup.add(mi); //å°†èœå•é¡¹åŠ å…¥å¼¹å‡ºèœå•ä¸­
+		}
+		this.add(popup); //å°†å¼¹å‡ºèœå•é™„åœ¨ç”»å¸ƒä¸Šã€‚
+		
+		connect(); 
+		new Thread(this).start(); 
 		this.addMouseListener(new MouseAdapter() {
-	public void mousePressed(MouseEvent e) { 
-    //Êó±ê°´ÏÂ£¬¼Ç×¡×ø±êÎ»ÖÃ
+		public void mousePressed(MouseEvent e) { 
+			Graphics g = getGraphics();
 			lastx = e.getX(); lasty = e.getY();
 			prex = lastx; prey = lasty;
         }
         public void mouseReleased(MouseEvent e){
 			int x = e.getX(), y = e.getY();
 			if (type==1)
-				sendData(new Line(lastx,lasty,x,y));//Êı¾İ±¨
+				sendData(new Line(lastx,lasty,x,y));
 			else if(type==2)
 				sendData(new Oval(lastx,lasty,x-lastx,y-lasty));
 			else if(type==3)
@@ -77,26 +91,63 @@ public class WhiteBoard extends Canvas implements Runnable{
      this.addMouseMotionListener(new MouseMotionAdapter() {
 		public void mouseDragged(MouseEvent e) {      
 			Graphics g = getGraphics();
+			g.setColor(color);
 			g.setXORMode(getBackground());
 			if ( type==1)
-				g.drawLine(lastx,lasty,prex,prey); //éß³ıÔ­Ö±Ïß
-			else if(type==2)
-				g.drawOval(lastx,lasty,prex-lastx,prey-lasty);
-			else if(type==3)
-				g.drawRect(lastx,lasty,prex-lastx,prey-lasty);
+				g.drawLine(lastx,lasty,prex,prey); 
+			else if(type==2) {
+				if (WhiteBoard.SW) {
+    	 				g.fillOval(lastx,lasty,prex-lastx,prey-lasty);
+     				}else {
+     					g.drawOval(lastx,lasty,prex-lastx,prey-lasty);
+     			}				
+			}
+			else if(type==3) {
+				if (WhiteBoard.SW) {
+					g.fillRect(lastx,lasty,prex-lastx,prey-lasty);
+ 				}else {
+ 					g.drawRect(lastx,lasty,prex-lastx,prey-lasty);
+ 				}	
+			}
+			
 			int x = e.getX(), y = e.getY();
 			if (type==1)
-				g.drawLine(lastx,lasty,x,y); //»æÖÆĞÂÖ±Ïß
-			else if(type==2)
-				g.drawOval(lastx,lasty,x-lastx,y-lasty);
-			else if(type==3)
-				g.drawRect(lastx,lasty,x-lastx,y-lasty);
+				g.drawLine(lastx,lasty,x,y); 
+			else if(type==2) {
+				if(WhiteBoard.SW) {
+					g.fillOval(lastx,lasty,x-lastx,y-lasty);
+				} else {
+					g.drawOval(lastx,lasty,x-lastx,y-lasty);
+				}				
+			}
+			
+			else if(type==3) {
+				if(WhiteBoard.SW) {
+					g.fillRect(lastx,lasty,x-lastx,y-lasty);
+				} else {
+					g.drawRect(lastx,lasty,x-lastx,y-lasty);
+				}	
+			}
+				
+			else if(type==4) {
+				g.setPaintMode();
+				g.setColor(getBackground());
+				g.fillRect(x, y, 8,8);
+			}
+			else if(type==5) {
+				g.fillOval(lastx, lasty, 4, 4);
+			}
 			prex = x; prey = y;
         }
       });
 }
- 
-   public void connect() {  //¼ÓÈë¶à²¥×é
+  public void processMouseEvent(MouseEvent e){
+	  if(e.isPopupTrigger())
+		  popup.show(this, e.getX(), e.getY());
+	  else super.processMouseEvent(e);
+  }
+  
+   public void connect() {  
     try {
  		 mSocket = new MulticastSocket(7777);
   		 inetAddress = InetAddress.getByName("230.0.0.1");
@@ -104,7 +155,7 @@ public class WhiteBoard extends Canvas implements Runnable{
 } catch (Exception e) { 	}
    }
 
-   public void sendData(Shape data) { //·¢ËÍÊı¾İ
+   public void sendData(Shape data) { 
       try {
          ByteArrayOutputStream byteStream = new
           ByteArrayOutputStream();
@@ -115,51 +166,77 @@ public class WhiteBoard extends Canvas implements Runnable{
       byte[] sendBuf = byteStream.toByteArray();
         DatagramPacket packet = new DatagramPacket(
                       sendBuf, sendBuf.length, inetAddress, 7777);
-	     mSocket.send(packet); //·¢ËÍÊı¾İ±¨
+	     mSocket.send(packet); 
      } catch(Exception e) {System.out.println(e); }
    }
 
-   public void run() { //½ÓÊÕÏûÏ¢²¢ÏÔÊ¾
+   
+   public void run() { 
        try {
-          byte[ ] data = new byte[100]; // ×Ö½Ú»º³åÇø´æ·Å½ÓÊÕÊı¾İ
+          byte[ ] data = new byte[100]; 
 		    DatagramPacket packet = new DatagramPacket(data,
  					data.length);
        	while (true) { 
-		       mSocket.receive(packet); // ½ÓÊÕÊı¾İ±¨
+		       mSocket.receive(packet); 
 ByteArrayInputStream byteStream = new
             ByteArrayInputStream(data);
              ObjectInputStream is = new
              ObjectInputStream(new BufferedInputStream(byteStream));
 Shape p = (Shape)is.readObject();
-               drawGraph(p); //»æÖÆÊÕµ½µÄÍ¼ĞÎ
+               drawGraph(p); 
   			}
 	} catch (Exception e) { System.out.println(e);}
    }
 
-   public void drawGraph(Shape p) { //»æÖÆĞÎ×´
+   public void actionPerformed(ActionEvent e) { //å®ç°å¼¹å‡ºå¼æ¥å£
+	   String name =((MenuItem)e.getSource()).getLabel();
+	   if(name.equals("Clear")) { //æ¸…é™¤ç”»é¢
+		   Graphics g = this.getGraphics();
+		   g.setColor(this.getBackground());
+		   g.fillRect(0, 0, this.getSize().width,this.getSize().height);
+	   }
+	   else if(name.equals("Red")) color=Color.red;
+	   else if(name.equals("Green")) color=Color.green;
+	   else if(name.equals("Blue")) color=Color.blue;
+	   else if(name.equals("Black")) color=Color.black;
+   }
+   
+   public void drawGraph(Shape p) { 
 		Graphics g = getGraphics();  
 		p.draw(g);
 		graphs.add(p);       
    }
 
    public void paint(Graphics g) {
-         // ±éÀúÁĞ±íÏÔÊ¾Í¼ĞÎ
         for (int k=0;k<graphs.size();k++)
            graphs.get(k).draw(g);
    }
 
    public static void main(String[ ] args) {
         Frame x = new  Frame();
+        Button eraser=new Button("Eraser");
+        Button dot=new Button("Dot");
         Button line = new Button("line");
         Button oval = new Button("Oval");
 		Button rect=new Button("Rect");
+		Button fill = new Button("fill");
+		
         Panel p = new Panel();
         x.add("South",p);
+    	p.add(eraser);
+    	p.add(dot);
         p.add(line);
 		p.add(oval);
 		p.add(rect);
+		p.add(fill);
         WhiteBoard b = new  WhiteBoard();
         x.add(b);
+        x.addWindowListener(new WindowAdapter(){  
+            public void windowClosing(WindowEvent e){  
+                System.exit(0);  
+            }  
+            }); 
+        
         line.addActionListener(new ActionListener(){
            public void actionPerformed(ActionEvent e){
                b.type = 1;              
@@ -175,7 +252,23 @@ Shape p = (Shape)is.readObject();
 				b.type=3;
 			}
 		});
-        x.setSize(200,150);
+		eraser.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				b.type=4;
+			}
+		});
+		
+		fill.addActionListener(new ActionListener(){
+	           public void actionPerformed(ActionEvent e){
+	        	   WhiteBoard.SW = !WhiteBoard.SW;
+	           }
+	        });
+		dot.addActionListener(new ActionListener(){
+	           public void actionPerformed(ActionEvent e){
+	        	   b.type=5;
+	           }
+	        });
+        x.setSize(500,500);
         x.setVisible(true);
 }
 }
